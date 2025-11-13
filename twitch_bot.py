@@ -1,7 +1,6 @@
-"""An example of connecting to a conduit and subscribing to EventSub when a User Authorizes the application.
+"""
 
 This bot can be restarted as many times without needing to subscribe or worry about tokens:
-- Tokens are stored in '.tio.tokens.json' by default
 - Subscriptions last 72 hours after the bot is disconnected and refresh when the bot starts.
 
 Consider reading through the documentation for AutoBot for more in depth explanations.
@@ -44,9 +43,10 @@ if not all([CLIENT_ID, CLIENT_SECRET, BOT_ID, OWNER_ID]):
     raise RuntimeError(f"Missing required env variables: {', '.join(missing)} (looked in {env_path})")
 
 class Bot(commands.AutoBot):
-    def __init__(self, *, game, token_database: asqlite.Pool, subs: list[eventsub.SubscriptionPayload]) -> None:
-        self.game = game
+    def __init__(self, *, game_manager, token_database: asqlite.Pool, subs: list[eventsub.SubscriptionPayload]) -> None:
+        self.game_manager = game_manager
         self.token_database = token_database
+        self._handled_game_commands = set()  # Track commands we've already handled
 
         super().__init__(
             client_id=CLIENT_ID,
@@ -61,6 +61,49 @@ class Bot(commands.AutoBot):
     async def setup_hook(self) -> None:
         # Add our component which contains our commands...
         await self.add_component(MyComponent(self))
+
+        # Add dynamic game commands component and initialize it
+        self.game_commands = DynamicGameCommands(self)
+        await self.add_component(self.game_commands)
+
+        # Initialize commands from the active game
+        if self.game_manager:
+            await self.game_commands.refresh_commands()
+
+
+#TODO: Improve error handling/logging
+#  Right now we get this response on every command
+# '''
+# ERROR    Bot Command error: <twitchio.ext.commands.core.CommandErrorPayload object at 0x000001B3230094E0>
+# NoneType: None
+# '''
+    async def event_command_error(self, error: Exception) -> None:
+        """Handle command errors - called when a command raises an exception"""
+        # The error object contains the context
+        if hasattr(error, '__context__') and isinstance(error.__context__, commands.CommandNotFound):
+            actual_error = error.__context__
+        elif isinstance(error, commands.CommandNotFound):
+            actual_error = error
+        else:
+            # For other errors, log them
+            LOGGER.error(f"Command error: {error}", exc_info=error)
+            return
+
+        # At this point we have a CommandNotFound error
+        # Check if this was a game command that we already handled
+        if self.game_manager:
+            # Extract the command name from the error message
+            error_msg = str(actual_error)
+            # Error message format: 'The command "commandname" was not found.'
+            if '"' in error_msg:
+                cmd_name = error_msg.split('"')[1].lower()
+                active_commands = self.game_manager.get_active_commands()
+                if cmd_name in active_commands:
+                    # This was a game command, already handled - suppress the error
+                    return
+
+        # If we get here, it's a real CommandNotFound error - log it
+        LOGGER.warning(f"Command not found: {actual_error}")
 
     async def event_oauth_authorized(self, payload: twitchio.authentication.UserTokenPayload) -> None:
         await self.add_token(payload.access_token, payload.refresh_token)
@@ -182,118 +225,66 @@ class MyComponent(commands.Component):
 
         !socials discord
         """
-        await ctx.send("discord.gg/...")
+        await ctx.send("https://discord.gg/DkRKH2AT")
 
-    # ========== Shape Smash Game Commands ==========
 
-    @commands.command()
-    async def square(self, ctx: commands.Context) -> None:
-        """Spawn a square shape in the game.
+class DynamicGameCommands(commands.Component):
+    """Component that dynamically routes commands to the active game"""
 
-        !square
-        """
-        if self.bot.game is None:
+    def __init__(self, bot: Bot) -> None:
+        super().__init__()
+        self.bot = bot
+
+    # Override the event_message to intercept commands and route them dynamically
+    @commands.Component.listener()
+    async def event_message(self, message: twitchio.ChatMessage) -> None:
+        """Listen for messages and route game commands dynamically"""
+        # Only process messages that start with the command prefix
+        if not message.text.startswith('!'):
             return
 
-        username = ctx.chatter.name
-        self.bot.game.add_shape('square', username)
-
-    @commands.command()
-    async def circle(self, ctx: commands.Context) -> None:
-        """Spawn a circle shape in the game.
-
-        !circle
-        """
-        if self.bot.game is None:
+        # Parse command name (first word without !)
+        parts = message.text[1:].split()
+        if not parts:
             return
 
-        username = ctx.chatter.name
-        self.bot.game.add_shape('circle', username)
+        cmd_name = parts[0].lower()
 
-    @commands.command()
-    async def triangle(self, ctx: commands.Context) -> None:
-        """Spawn a triangle shape in the game.
+        # Check if this command belongs to the active game
+        if self.bot.game_manager:
+            active_commands = self.bot.game_manager.get_active_commands()
+            if cmd_name in active_commands:
+                try:
+                    # Call the game's command handler
+                    active_commands[cmd_name](message)
+                    print(f"Routed !{cmd_name} to active game: {self.bot.game_manager.get_active_game().get_title()}")
+                except Exception as e:
+                    print(f"Error executing game command !{cmd_name}: {e}")
 
-        !triangle
-        """
-        if self.bot.game is None:
-            return
+    async def refresh_commands(self):
+        """Refresh is not needed since we route dynamically"""
+        if self.bot.game_manager:
+            active_game = self.bot.game_manager.get_active_game()
+            active_commands = self.bot.game_manager.get_active_commands()
+            print(f"Active game: {active_game.get_title()}")
+            print(f"Available commands: {', '.join(['!' + cmd for cmd in active_commands.keys()])}")
+        pass
 
-        username = ctx.chatter.name
-        self.bot.game.add_shape('triangle', username)
-
-    @commands.command()
-    async def boost(self, ctx: commands.Context) -> None:
-        """Give your shapes a momentary surge of velocity.
-
-        !boost
-        """
-        if self.bot.game is None:
-            return
-
-        username = ctx.chatter.name
-        boosted_count = 0
-
-        # Apply boost to all shapes owned by this user
-        for shape in self.bot.game.shapes:
-            if shape.username == username:
-                shape.vy -= random.uniform(15, 100)  # Strong upward boost
-                shape.vx += random.uniform(-30, 30)  # Random horizontal push
-                boosted_count += 1
-
-        # Send feedback message if shapes were boosted
-        if boosted_count > 0:
-            await ctx.send(f"@{username} boosted {boosted_count} shape(s)! 🚀")
-
-    # ========== Future Feature Stubs ==========
-    # TODO: Implement these commands for enhanced gameplay
     @commands.is_elevated()
     @commands.command()
-    async def clear(self, ctx: commands.Context) -> None:
-        """Clear all shapes from the screen (moderator only).
+    async def nextgame(self, ctx: commands.Context) -> None:
+        """Switch to the next game (moderator/broadcaster only).
 
-        !clear
+        !nextgame
         """
-        if self.bot.game is None:
+        if not self.bot.game_manager:
             return
-        self.bot.game.clear_shapes()
 
-    @commands.command()
-    async def spin(self, ctx: commands.Context) -> None:
-        """Add rotational velocity to your shapes.
+        old_game = self.bot.game_manager.get_active_game().get_title()
+        self.bot.game_manager.next_game()
+        new_game = self.bot.game_manager.get_active_game().get_title()
 
-        !spin
-        """
-        # TODO: Implement shape rotation
-        # TODO: Add rotation velocity property to Shape class
-        # TODO: Update draw methods to handle rotation
-        pass
-
-    @commands.command()
-    async def explode(self, ctx: commands.Context) -> None:
-        """Make your shapes scatter in all directions.
-
-        !explode
-        """
-        # TODO: Implement explosion effect
-        # TODO: Apply random high velocity in all directions to user's shapes
-        # username = ctx.chatter.name
-        # for shape in self.bot.game.shapes:
-        #     if shape.username == username:
-        #         shape.vx = random.uniform(-20, 20)
-        #         shape.vy = random.uniform(-20, 20)
-        pass
-
-    @commands.command()
-    async def gravity(self, ctx: commands.Context, strength: int | None = None) -> None:
-        """Temporarily change gravity strength for your shapes.
-
-        !gravity [strength]
-        """
-        # TODO: Implement per-shape gravity modification
-        # TODO: Add gravity_multiplier property to Shape class
-        # TODO: Apply custom gravity in Shape.update() method
-        pass
+        await ctx.send(f"Switched from {old_game} to {new_game}!")
 
 
 async def setup_database(db: asqlite.Pool) -> tuple[list[tuple[str, str]], list[eventsub.SubscriptionPayload]]:
@@ -324,14 +315,14 @@ async def setup_database(db: asqlite.Pool) -> tuple[list[tuple[str, str]], list[
 
 # Our main entry point for our Bot
 # Best to setup_logging here, before anything starts
-def main(game=None) -> None:
+def main(game_manager=None) -> None:
     twitchio.utils.setup_logging(level=logging.INFO)
 
     async def runner() -> None:
         async with asqlite.create_pool("tokens.db") as tdb:
             tokens, subs = await setup_database(tdb)
 
-            async with Bot(game=game, token_database=tdb, subs=subs) as bot:
+            async with Bot(game_manager=game_manager, token_database=tdb, subs=subs) as bot:
                 for pair in tokens:
                     await bot.add_token(*pair)
 

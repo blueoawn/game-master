@@ -1,1 +1,13 @@
+# OAuth tokens database
 tokens*
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Old/deprecated files (kept for reference but not actively maintained)
+# Uncomment these if you want to exclude them from version control:
+# shapes.py
+# shape_smash.py
