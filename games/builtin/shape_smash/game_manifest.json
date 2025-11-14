@@ -1,0 +1,35 @@
+{
+  "id": "shape_smash",
+  "version": "2.0.0",
+  "name": "Shape Smash",
+  "description": "Interactive physics sandbox where viewers spawn shapes that bounce and collide",
+  "author": "blueoawn",
+  "license": "MIT",
+
+  "backend": {
+    "entry_point": "game:ShapeSmashGame"
+  },
+
+  "frontend": {
+    "entry_point": "frontend/ShapeSmash.ts",
+    "component": "ShapeSmash",
+    "assets": []
+  },
+
+  "config": {
+    "max_shapes": 50,
+    "canvas_width": 1920,
+    "canvas_height": 1080,
+    "gravity": 0.5,
+    "bounce": 0.7
+  },
+
+  "commands": [
+    {"name": "square", "description": "Spawn a square"},
+    {"name": "circle", "description": "Spawn a circle"},
+    {"name": "triangle", "description": "Spawn a triangle"},
+    {"name": "boost", "description": "Boost all shapes upward"},
+    {"name": "explode", "description": "Make shapes explode outward from center"},
+    {"name": "clear", "description": "Clear all shapes (moderator only)"}
+  ]
+}

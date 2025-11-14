@@ -1,161 +1,377 @@
-# Twitch Chat Games
+# Twitch Chat Games v2.0
 
-A multi-game platform where your Twitch chat can play interactive games! Currently features Shape Smash with more games coming soon.
+A modular multi-game platform where your Twitch chat can play interactive games! Now with a **Flask backend** and **TypeScript frontend** architecture for better performance and easier game development.
 
-## Complete Setup Guide
+## 🎯 New Architecture
 
-### Step 1: Create a Twitch Application
+### Backend (Python)
+- **Flask + Flask-SocketIO**: Real-time WebSocket communication
+- **TwitchBot**: Handles Twitch chat integration
+- **GameManager**: Manages game lifecycle and switching
+- **BaseGame**: Abstract class for all games with state management
 
-1. Go to https://dev.twitch.tv/console/apps
-2. Click "Register Your Application"
-3. Do the oauth thing for your bot so it can join your channel, uhh, I followed this: [quickstart guide](https://twitchio.dev/en/latest/getting-started/quickstart.html)
-4. Once you have tokens, you're good to go.
+### Frontend (TypeScript)
+- **Vite**: Fast build tooling
+- **Socket.IO Client**: Real-time state updates
+- **Canvas Rendering**: Smooth 60 FPS animations
+- **GameRegistry**: Dynamic game component loading
 
-### Step 2: Install Dependencies
+### Games
+Each game consists of:
+- **Backend (Python)**: Command handlers, game logic, state management
+- **Frontend (TypeScript)**: Rendering, animations, physics
+- **Manifest**: JSON configuration for auto-discovery
 
-```bash
-pip install pygame twitchio python-dotenv requests
+## 📁 New Folder Structure
+
+```
+chat-games/
+├── backend/
+│   ├── app.py                 # Flask application
+│   ├── base_game.py           # BaseGame abstract class
+│   ├── game_loader.py         # Game discovery system
+│   ├── game_manager.py        # Game lifecycle management
+│   ├── twitch_bot.py          # Twitch integration
+│   └── requirements.txt       # Python dependencies
+│
+├── frontend/
+│   ├── src/
+│   │   ├── main.ts           # Entry point
+│   │   ├── socket.ts         # SocketIO client
+│   │   ├── gameManager.ts    # Frontend game coordination
+│   │   ├── types.ts          # TypeScript types
+│   │   └── games/
+│   │       ├── registry.ts   # Game component registry
+│   │       └── ShapeSmash.ts # Shape Smash frontend
+│   ├── public/
+│   │   └── index.html
+│   ├── package.json
+│   ├── tsconfig.json
+│   └── vite.config.ts
+│
+├── games/
+│   └── builtin/
+│       └── shape_smash/
+│           ├── game_manifest.json
+│           ├── backend/
+│           │   └── game.py
+│           └── frontend/
+│               └── ShapeSmash.ts
+│
+└── submodules/               # Add games here as git submodules!
 ```
 
-### Step 3: Configure the Bot
+## 🚀 Setup Instructions
 
-1. **If you don't have a `.env` file yet**, copy `.env.example` to `.env` in the **git root** folder:
-   ```bash
-   cd "\stream tools"
-   cp .env.example .env
-   ```
-
-2. Edit the `.env` file in the **root** of the [stream-tools](https://github.com/blueoawn/) repository and add the fields for the twitch bot:
-   
-   ```
-   CLIENT_ID =
-   CLIENT_SECRET =
-   BOT_ID =
-   OWNER_ID = 
-   ```
-
-   **Note:** The `.env` file is in the git root (`stream-tools/.env`), not in the `chat-games/` folder. This allows all tools in the repo to share the same configuration.
-
-**Required Scopes:**
-- `user:read:chat` - Read chat messages
-- `user:bot` - Act as a bot
-- `channel:bot` - Bot in channel
-- `moderator:read:chatters` - Read chatters list
-
-### Step 4: Run the Games!
+### 1. Install Python Dependencies
 
 ```bash
-cd chat-games
-python main.py
+cd chat-games/backend
+pip install -r requirements.txt
 ```
 
-The game window will open and the bot will connect to your Twitch chat!
+### 2. Install Frontend Dependencies
 
-**Note:** You can run this from anywhere in the repo - the game will automatically find the `.env` file in the git root.
+```bash
+cd chat-games/frontend
+npm install
+```
 
-## Available Games
+### 3. Configure Environment Variables
+
+Make sure your `.env` file exists in the root of `stream-tools/`:
+
+```
+CLIENT_ID=your_twitch_client_id
+CLIENT_SECRET=your_twitch_client_secret
+BOT_ID=your_bot_user_id
+OWNER_ID=your_user_id
+```
+
+### 4. Build Frontend (Production)
+
+```bash
+cd chat-games/frontend
+npm run build
+```
+
+This creates `frontend/dist/` which Flask will serve.
+
+### 5. Start the Application
+
+```bash
+cd chat-games/backend
+python app.py
+```
+
+This starts:
+- Flask server on `http://localhost:5000`
+- SocketIO WebSocket server
+- Twitch bot in background thread
+
+### 6. Access the Application
+
+Open your browser to: `http://localhost:5000`
+
+## 🎮 Available Games
 
 ### Shape Smash
-An interactive physics sandbox where viewers spawn shapes that bounce and collide!
+Interactive physics sandbox where viewers spawn shapes that bounce and collide!
 
 **Chat Commands:**
-- `!square` - Spawns a square
-- `!circle` - Spawns a circle
-- `!triangle` - Spawns a triangle
-- `!boost` - Boost all your shapes upward
-- `!spin` - Make shapes spin wildly
+- `!square` - Spawn a square
+- `!circle` - Spawn a circle
+- `!triangle` - Spawn a triangle
+- `!boost` - Boost all shapes upward
 - `!explode` - Make shapes explode outward from center
-- `!gravity` - Toggle gravity direction
 - `!clear` - Clear all shapes (moderator only)
 
-### More Games Coming Soon!
-The architecture now supports multiple games that can cycle automatically.
+**Moderator Commands:**
+- `!nextgame` - Switch to the next game
 
-## Global Commands
+## 🔧 Development Mode
 
-- `!nextgame` - Switch to the next game (moderator/broadcaster only)
+For development with hot-reload:
 
-## Architecture Overview
-
-The application is built with a modular architecture that makes it easy to add new games:
-
-### File Structure
-
-```
-stream-tools/              # Git root
-├── .env                   # Your configuration (shared by all tools, not in git)
-├── .env.example           # Example configuration for all tools
-├── .gitignore             # Git ignore file
-└── chat-games/            # Multi-game platform
-    ├── main.py                # Main entry point (run this!)
-    ├── game_manager.py        # Manages game cycling and canvas
-    ├── twitch_bot.py          # Twitch bot with dynamic command loading
-    ├── shape_smash.py         # Legacy entry point (deprecated)
-    ├── assets/                # Shared resources across all games
-    │   ├── shapes.py          # Shape classes with physics
-    │   ├── physics.py         # Physics constants
-    │   └── colors.py          # Color definitions
-    ├── games/                 # Individual game modules
-    │   ├── base_game.py       # Abstract base class for all games
-    │   └── shape_smash/       # Shape Smash game
-    │       └── game.py        # ShapeSmashGame implementation
-    ├── requirements.txt       # Python dependencies
-    ├── tokens.db              # OAuth tokens (not in git, auto-generated)
-    └── README.md              # This file
+**Terminal 1 - Backend:**
+```bash
+cd chat-games/backend
+python app.py
 ```
 
-## Adding New Games
+**Terminal 2 - Frontend:**
+```bash
+cd chat-games/frontend
+npm run dev
+```
 
-To add a new game to the platform:
+Then open `http://localhost:3000` (Vite dev server with auto-refresh)
 
-1. **Create a new game folder** in `games/`:
+## ➕ Adding New Games
+
+### Option 1: Built-in Game
+
+1. **Create game folder:**
    ```bash
-   mkdir games/my_new_game
+   mkdir -p games/builtin/my_game/backend
+   mkdir -p games/builtin/my_game/frontend
    ```
 
-2. **Create your game class** inheriting from `BaseGame`:
-   ```python
-   # games/my_new_game/game.py
-   from games.base_game import BaseGame
+2. **Create manifest** (`games/builtin/my_game/game_manifest.json`):
+   ```json
+   {
+     "id": "my_game",
+     "name": "My Awesome Game",
+     "version": "1.0.0",
+     "description": "A cool new game",
+     "author": "your_name",
 
-   class MyNewGame(BaseGame):
+     "backend": {
+       "entry_point": "game:MyGame"
+     },
+
+     "frontend": {
+       "component": "MyGame",
+       "entry_point": "frontend/MyGame.ts"
+     },
+
+     "config": {
+       "setting1": "value1"
+     },
+
+     "commands": [
+       {"name": "command1", "description": "Does something"}
+     ]
+   }
+   ```
+
+3. **Create backend** (`games/builtin/my_game/backend/game.py`):
+   ```python
+   import sys
+   from pathlib import Path
+
+   # Add backend to path
+   backend_path = Path(__file__).resolve().parent.parent.parent.parent.parent / "backend"
+   sys.path.insert(0, str(backend_path))
+
+   from base_game import BaseGame
+
+   class MyGame(BaseGame):
        def get_title(self) -> str:
-           return "My New Game"
+           return "My Awesome Game"
+
+       def get_game_id(self) -> str:
+           return "my_game"
 
        def get_commands(self) -> dict:
            return {
-               'command1': self.handle_command1,
-               'command2': self.handle_command2
+               'command1': self.handle_command1
            }
 
-       def update(self):
-           # Game logic here
-           pass
+       def get_initial_state(self) -> dict:
+           return {'score': 0}
 
-       def draw(self, screen):
-           # Drawing code here
-           pass
+       def get_frontend_config(self) -> dict:
+           return {
+               'component': 'MyGame',
+               'canvas_width': 1920,
+               'canvas_height': 1080
+           }
 
-       def reset(self):
-           # Reset game state
-           pass
+       def handle_command1(self, message):
+           # Update state and emit to frontend
+           self.update_state({'score': self.game_state.get('score', 0) + 1})
    ```
 
-3. **Register your game** in [main.py](main.py):
-   ```python
-   from games.my_new_game import MyNewGame
+4. **Create frontend** (`games/builtin/my_game/frontend/MyGame.ts`):
+   ```typescript
+   import type { GameComponent, GameState, GameConfig } from '../../../frontend/src/types';
 
-   # In main():
-   my_game = MyNewGame(game_manager.get_font(), game_manager.get_title_font())
-   game_manager.register_game(my_game)
+   export class MyGame implements GameComponent {
+       private container: HTMLElement;
+       private canvas: HTMLCanvasElement;
+       private ctx: CanvasRenderingContext2D;
+
+       constructor(container: HTMLElement, config: GameConfig) {
+           this.container = container;
+           this.canvas = document.createElement('canvas');
+           this.ctx = this.canvas.getContext('2d')!;
+           container.appendChild(this.canvas);
+       }
+
+       init(initialState: GameState): void {
+           // Initialize game
+       }
+
+       update(state: GameState): void {
+           // Update and render
+       }
+
+       destroy(): void {
+           // Cleanup
+       }
+   }
    ```
 
-4. **That's it!** Your game is now part of the rotation and its commands will automatically be available when it's active.
+5. **Register in frontend** (`frontend/src/games/registry.ts`):
+   ```typescript
+   import { MyGame } from '../../games/builtin/my_game/frontend/MyGame';
 
-## Future Plans
+   // Add to registry
+   ['MyGame', MyGame],
+   ```
 
-- [ ] Player stats database (track wins, participation, etc.)
-- [ ] Auto-cycling based on game finish() signal
-- [ ] More games!
-- [ ] Custom game timers
-- [ ] Game voting system
+6. **Restart the application** - Your game will be auto-discovered!
+
+### Option 2: Submodule Game
+
+Add an external game repository as a git submodule:
+
+```bash
+cd chat-games
+git submodule add https://github.com/username/cool-game.git submodules/cool-game
+```
+
+As long as the game has a `game_manifest.json` file, it will be auto-discovered!
+
+## 📡 Communication Flow
+
+```
+Twitch Chat → TwitchBot → Game Command Handler → Game State Update
+                                                          ↓
+                                                  emit_state()
+                                                          ↓
+                                              Flask-SocketIO Server
+                                                          ↓
+                                              Socket.IO WebSocket
+                                                          ↓
+                                          TypeScript Frontend GameManager
+                                                          ↓
+                                              Game Component update()
+                                                          ↓
+                                                  Canvas Rendering
+```
+
+## 🎨 Game State Management
+
+**Backend (Python):**
+```python
+# Update state and emit to frontend
+self.update_state({
+    'score': 100,
+    'event': 'player_scored',
+    'player_name': username
+})
+```
+
+**Frontend (TypeScript):**
+```typescript
+update(state: GameState): void {
+    if (state.event === 'player_scored') {
+        this.showAnimation(state.player_name);
+    }
+    this.score = state.score;
+    this.render();
+}
+```
+
+## 🔍 Debugging
+
+Access debug tools in browser console:
+```javascript
+// Available globally
+window.gameManager  // Frontend game manager
+window.socket       // Socket.IO client
+
+// Load a different game
+window.gameManager.requestGameSwitch('my_game')
+```
+
+## 📊 Architecture Benefits
+
+✅ **Separation of Concerns**: Backend handles logic, frontend handles rendering
+✅ **Real-time Updates**: WebSocket communication for instant state sync
+✅ **Modular Games**: Easy to add/remove games via submodules
+✅ **Type Safety**: TypeScript prevents runtime errors
+✅ **Auto-Discovery**: Games self-register via manifests
+✅ **Hot-Reload**: Fast development iteration
+✅ **Scalable**: Can run on separate servers if needed
+
+## 🐛 Troubleshooting
+
+**Frontend not loading?**
+- Make sure you ran `npm run build` in `frontend/`
+- Check Flask is serving from `frontend/dist/`
+
+**Games not discovered?**
+- Check `game_manifest.json` is valid JSON
+- Ensure `backend/entry_point` matches class name
+- Look for errors in Flask console
+
+**SocketIO not connecting?**
+- Verify Flask is running on port 5000
+- Check browser console for connection errors
+- Ensure CORS is enabled (it is by default)
+
+**Commands not working?**
+- Make sure Twitch bot is connected (check console)
+- Verify OAuth tokens are valid
+- Check command is registered in game's `get_commands()`
+
+## 🤝 Contributing
+
+We welcome new games! Create a repository with the structure above and share it as a submodule.
+
+**Requirements for game repositories:**
+- Valid `game_manifest.json`
+- Backend class inheriting from `BaseGame`
+- Frontend class implementing `GameComponent`
+- README with game instructions
+
+## 📝 License
+
+MIT
+
+## 🎉 Credits
+
+Built with ❤️ for the Twitch streaming community

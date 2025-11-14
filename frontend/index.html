@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Twitch Chat Games</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background-color: #0e0e10;
+        color: #efeff1;
+        overflow: hidden;
+      }
+
+      #app {
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      #header {
+        background-color: #18181b;
+        padding: 1rem;
+        border-bottom: 2px solid #9147ff;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      #header h1 {
+        color: #9147ff;
+        font-size: 1.5rem;
+      }
+
+      #game-info {
+        color: #adadb8;
+        font-size: 0.9rem;
+      }
+
+      #status {
+        padding: 0.5rem 1rem;
+        background-color: #1f1f23;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 0.85rem;
+      }
+
+      #connection-status {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background-color: #53fc18;
+      }
+
+      .status-dot.disconnected {
+        background-color: #ff4444;
+      }
+
+      #game-root {
+        flex: 1;
+        position: relative;
+        background-color: #0e0e10;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      #loading {
+        text-align: center;
+        color: #adadb8;
+      }
+
+      #loading h2 {
+        margin-bottom: 1rem;
+        color: #9147ff;
+      }
+
+      .spinner {
+        border: 4px solid #1f1f23;
+        border-top: 4px solid #9147ff;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="header">
+        <h1>🎮 Twitch Chat Games</h1>
+        <div id="game-info">
+          <span id="game-title">Loading...</span>
+        </div>
+      </div>
+      <div id="status">
+        <div id="connection-status">
+          <div class="status-dot" id="status-dot"></div>
+          <span id="status-text">Connecting...</span>
+        </div>
+        <div id="game-stats"></div>
+      </div>
+      <div id="game-root">
+        <div id="loading">
+          <h2>Loading Game...</h2>
+          <div class="spinner"></div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

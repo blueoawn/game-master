@@ -1,9 +1,6 @@
 """
-
-This bot can be restarted as many times without needing to subscribe or worry about tokens:
-- Subscriptions last 72 hours after the bot is disconnected and refresh when the bot starts.
-
-Consider reading through the documentation for AutoBot for more in depth explanations.
+Twitch bot integration for the new Flask architecture.
+Adapted from original twitch_bot.py to work with the new system.
 """
 
 import asyncio
@@ -12,11 +9,9 @@ import random
 from typing import TYPE_CHECKING
 
 import asqlite
-
 import twitchio
 from twitchio import eventsub
 from twitchio.ext import commands
-
 
 if TYPE_CHECKING:
     import sqlite3
@@ -24,13 +19,10 @@ from pathlib import Path
 import os
 from dotenv import load_dotenv
 
-
 LOGGER: logging.Logger = logging.getLogger("Bot")
 
-# Consider using a .env or another form of Configuration file!
-
-# Load the .env file located one directory up from this file
-env_path = Path(__file__).resolve().parent.parent / ".env"
+# Load the .env file located one directory up from backend/
+env_path = Path(__file__).resolve().parent.parent.parent / ".env"
 load_dotenv(dotenv_path=env_path)
 
 CLIENT_ID: str = os.getenv("CLIENT_ID") or ""
@@ -41,6 +33,7 @@ OWNER_ID = os.getenv("OWNER_ID") or ""
 if not all([CLIENT_ID, CLIENT_SECRET, BOT_ID, OWNER_ID]):
     missing = [k for k in ("CLIENT_ID", "CLIENT_SECRET", "BOT_ID", "OWNER_ID") if not os.getenv(k)]
     raise RuntimeError(f"Missing required env variables: {', '.join(missing)} (looked in {env_path})")
+
 
 class Bot(commands.AutoBot):
     def __init__(self, *, game_manager, token_database: asqlite.Pool, subs: list[eventsub.SubscriptionPayload]) -> None:
@@ -70,13 +63,6 @@ class Bot(commands.AutoBot):
         if self.game_manager:
             await self.game_commands.refresh_commands()
 
-
-#TODO: Improve error handling/logging
-#  Right now we get this response on every command
-# '''
-# ERROR    Bot Command error: <twitchio.ext.commands.core.CommandErrorPayload object at 0x000001B3230094E0>
-# NoneType: None
-# '''
     async def event_command_error(self, error: Exception) -> None:
         """Handle command errors - called when a command raises an exception"""
         # The error object contains the context
@@ -149,83 +135,34 @@ class Bot(commands.AutoBot):
 
 
 class MyComponent(commands.Component):
-    # An example of a Component with some simple commands and listeners
-    # You can use Components within modules for a more organized codebase and hot-reloading.
+    """Example component with simple commands"""
 
     def __init__(self, bot: Bot) -> None:
-        # Passing args is not required...
-        # We pass bot here as an example...
         self.bot = bot
 
-    # An example of listening to an event
-    # We use a listener in our Component to display the messages received.
     @commands.Component.listener()
     async def event_message(self, payload: twitchio.ChatMessage) -> None:
         print(f"[{payload.broadcaster.name}] - {payload.chatter.name}: {payload.text}")
 
     @commands.command()
     async def hi(self, ctx: commands.Context) -> None:
-        """Command that replies to the invoker with Hi <name>!
-
-        !hi
-        """
+        """Command that replies to the invoker with Hi <name>!"""
         await ctx.reply(f"Hi {ctx.chatter}!")
 
     @commands.command()
     async def say(self, ctx: commands.Context, *, message: str) -> None:
-        """Command which repeats what the invoker sends.
-
-        !say <message>
-        """
+        """Command which repeats what the invoker sends."""
         await ctx.send(message)
 
     @commands.command()
     async def add(self, ctx: commands.Context, left: int, right: int) -> None:
-        """Command which adds to integers together.
-
-        !add <number> <number>
-        """
+        """Command which adds to integers together."""
         await ctx.reply(f"{left} + {right} = {left + right}")
 
     @commands.command()
     async def choice(self, ctx: commands.Context, *choices: str) -> None:
-        """Command which takes in an arbitrary amount of choices and randomly chooses one.
-
-        !choice <choice_1> <choice_2> <choice_3> ...
-        """
+        """Command which takes in an arbitrary amount of choices and randomly chooses one."""
         await ctx.reply(f"You provided {len(choices)} choices, I choose: {random.choice(choices)}")
-
-    @commands.command(aliases=["thanks", "thank"])
-    async def give(self, ctx: commands.Context, user: twitchio.User, amount: int, *, message: str | None = None) -> None:
-        """A more advanced example of a command which has makes use of the powerful argument parsing, argument converters and
-        aliases.
-
-        The first argument will be attempted to be converted to a User.
-        The second argument will be converted to an integer if possible.
-        The third argument is optional and will consume the reast of the message.
-
-        !give <@user|user_name> <number> [message]
-        !thank <@user|user_name> <number> [message]
-        !thanks <@user|user_name> <number> [message]
-        """
-        msg = f"with message: {message}" if message else ""
-        await ctx.send(f"{ctx.chatter.mention} gave {amount} thanks to {user.mention} {msg}")
-
-    @commands.group(invoke_fallback=True)
-    async def socials(self, ctx: commands.Context) -> None:
-        """Group command for our social links.
-
-        !socials
-        """
-        await ctx.send("discord.gg/..., youtube.com/..., twitch.tv/...")
-
-    @socials.command(name="discord")
-    async def socials_discord(self, ctx: commands.Context) -> None:
-        """Sub command of socials that sends only our discord invite.
-
-        !socials discord
-        """
-        await ctx.send("https://discord.gg/DkRKH2AT")
 
 
 class DynamicGameCommands(commands.Component):
@@ -235,7 +172,6 @@ class DynamicGameCommands(commands.Component):
         super().__init__()
         self.bot = bot
 
-    # Override the event_message to intercept commands and route them dynamically
     @commands.Component.listener()
     async def event_message(self, message: twitchio.ChatMessage) -> None:
         """Listen for messages and route game commands dynamically"""
@@ -257,47 +193,44 @@ class DynamicGameCommands(commands.Component):
                 try:
                     # Call the game's command handler
                     active_commands[cmd_name](message)
-                    print(f"Routed !{cmd_name} to active game: {self.bot.game_manager.get_active_game().get_title()}")
+                    active_game = self.bot.game_manager.get_active_game()
+                    if active_game:
+                        LOGGER.info(f"Routed !{cmd_name} to active game: {active_game.get_title()}")
                 except Exception as e:
-                    print(f"Error executing game command !{cmd_name}: {e}")
+                    LOGGER.error(f"Error executing game command !{cmd_name}: {e}")
 
     async def refresh_commands(self):
         """Refresh is not needed since we route dynamically"""
-        if self.bot.game_manager:
+        if self.bot.game_manager and self.bot.game_manager.get_active_game():
             active_game = self.bot.game_manager.get_active_game()
             active_commands = self.bot.game_manager.get_active_commands()
-            print(f"Active game: {active_game.get_title()}")
-            print(f"Available commands: {', '.join(['!' + cmd for cmd in active_commands.keys()])}")
-        pass
+            LOGGER.info(f"Active game: {active_game.get_title()}")
+            LOGGER.info(f"Available commands: {', '.join(['!' + cmd for cmd in active_commands.keys()])}")
 
     @commands.is_elevated()
     @commands.command()
     async def nextgame(self, ctx: commands.Context) -> None:
-        """Switch to the next game (moderator/broadcaster only).
-
-        !nextgame
-        """
+        """Switch to the next game (moderator/broadcaster only)."""
         if not self.bot.game_manager:
             return
 
-        old_game = self.bot.game_manager.get_active_game().get_title()
+        active_game = self.bot.game_manager.get_active_game()
+        old_game = active_game.get_title() if active_game else "None"
         self.bot.game_manager.next_game()
-        new_game = self.bot.game_manager.get_active_game().get_title()
+        new_game = self.bot.game_manager.get_active_game()
+        new_game_title = new_game.get_title() if new_game else "None"
 
-        await ctx.send(f"Switched from {old_game} to {new_game}!")
+        await ctx.send(f"Switched from {old_game} to {new_game_title}!")
 
 
 async def setup_database(db: asqlite.Pool) -> tuple[list[tuple[str, str]], list[eventsub.SubscriptionPayload]]:
-    # Create our token table, if it doesn't exist..
-    # You should add the created files to .gitignore or potentially store them somewhere safer
-    # This is just for example purposes...
-
+    """Setup database and fetch existing tokens"""
     query = """CREATE TABLE IF NOT EXISTS tokens(user_id TEXT PRIMARY KEY, token TEXT NOT NULL, refresh TEXT NOT NULL)"""
     async with db.acquire() as connection:
         await connection.execute(query)
 
         # Fetch any existing tokens...
-        rows: list[sqlite3.Row] = await connection.fetchall("""SELECT * from tokens""")
+        rows: list['sqlite3.Row'] = await connection.fetchall("""SELECT * from tokens""")
 
         tokens: list[tuple[str, str]] = []
         subs: list[eventsub.SubscriptionPayload] = []
@@ -313,9 +246,8 @@ async def setup_database(db: asqlite.Pool) -> tuple[list[tuple[str, str]], list[
     return tokens, subs
 
 
-# Our main entry point for our Bot
-# Best to setup_logging here, before anything starts
 def main(game_manager=None) -> None:
+    """Main entry point for the Bot (standalone mode)"""
     twitchio.utils.setup_logging(level=logging.INFO)
 
     async def runner() -> None:
