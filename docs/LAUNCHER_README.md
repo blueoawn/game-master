@@ -1,6 +1,6 @@
 # Chat Games Launcher Scripts
 
-Easy-to-use launcher scripts for running Chat Games with a single command.
+> Easy-to-use launcher scripts for running Chat Games with a single command.
 
 ## Quick Start
 
