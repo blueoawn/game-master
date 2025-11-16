@@ -225,9 +225,19 @@ class DynamicGameCommands(commands.Component):
 
 async def setup_database(db: asqlite.Pool) -> tuple[list[tuple[str, str]], list[eventsub.SubscriptionPayload]]:
     """Setup database and fetch existing tokens"""
-    query = """CREATE TABLE IF NOT EXISTS tokens(user_id TEXT PRIMARY KEY, token TEXT NOT NULL, refresh TEXT NOT NULL)"""
     async with db.acquire() as connection:
-        await connection.execute(query)
+        # Create tokens table
+        await connection.execute("""CREATE TABLE IF NOT EXISTS tokens(user_id TEXT PRIMARY KEY, token TEXT NOT NULL, refresh TEXT NOT NULL)""")
+
+        # Create player_scores table for leaderboard persistence
+        await connection.execute("""
+            CREATE TABLE IF NOT EXISTS player_scores(
+                username TEXT PRIMARY KEY,
+                score INTEGER NOT NULL DEFAULT 0,
+                game_name TEXT NOT NULL DEFAULT 'ShapeSmash',
+                last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
 
         # Fetch any existing tokens...
         rows: list['sqlite3.Row'] = await connection.fetchall("""SELECT * from tokens""")

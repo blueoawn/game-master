@@ -13,6 +13,13 @@ export class GameManager {
   private socket: Socket;
   private container: HTMLElement;
   private currentGame: GameComponent | null = null;
+
+  /**
+   * Accumulated game state for tracking/debugging purposes.
+   * IMPORTANT: This is NOT passed to game components - we pass incremental
+   * updates instead to prevent transient events from persisting.
+   * See STATE_MANAGEMENT.md for details.
+   */
   private gameState: GameState = {};
   private currentGameId: string | null = null;
 
@@ -79,11 +86,22 @@ export class GameManager {
       return;
     }
 
-    // Merge update into current state
+    // Merge update into current state for tracking/debugging
     this.gameState = { ...this.gameState, ...update };
 
-    // Update game component
-    this.currentGame.update(this.gameState);
+    /**
+     * CRITICAL: Pass the update as-is, NOT the merged state.
+     *
+     * Why? If backend sends:
+     *   1. {event: 'boost'}
+     *   2. {shape_added: {...}}
+     *
+     * Passing merged state would send {event: 'boost', shape_added: {...}}
+     * on the second update, causing events to trigger multiple times.
+     *
+     * See STATE_MANAGEMENT.md § "Bug #1: Merging State Before Passing"
+     */
+    this.currentGame.update(update);
 
     // Log for debugging (uses currentGameId)
     if (Object.keys(update).length > 0) {

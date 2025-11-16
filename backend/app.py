@@ -119,7 +119,8 @@ def handle_connect():
         emit('game_loaded', {
             'gameId': game_manager.active_game_id,
             'title': game_manager.active_game.get_title(),
-            'initialState': game_manager.active_game.game_state,
+            # Use get_initial_state() not game_state to avoid sending accumulated events
+            'initialState': game_manager.active_game.get_initial_state(),
             'config': game_manager.loader.get_frontend_config(
                 game_manager.active_game_id
             )
@@ -143,6 +144,70 @@ def handle_load_game(data):
     except Exception as e:
         logger.error(f"Error loading game: {e}")
         emit('error', {'message': str(e)})
+
+@socketio.on('add_score')
+def handle_add_score(data):
+    """Add score for a player"""
+    username = data.get('username')
+    points = data.get('points', 1)
+    game_name = data.get('game_name', 'ShapeSmash')
+
+    if not username:
+        return
+
+    import sqlite3
+
+    try:
+        conn = sqlite3.connect('tokens.db')
+        cursor = conn.cursor()
+
+        # Check if player exists
+        cursor.execute('SELECT score FROM player_scores WHERE username = ?', (username,))
+        row = cursor.fetchone()
+
+        if row:
+            # Update existing score
+            new_score = row[0] + points
+            cursor.execute(
+                'UPDATE player_scores SET score = ?, last_updated = CURRENT_TIMESTAMP WHERE username = ?',
+                (new_score, username)
+            )
+        else:
+            # Insert new player
+            cursor.execute(
+                'INSERT INTO player_scores (username, score, game_name) VALUES (?, ?, ?)',
+                (username, points, game_name)
+            )
+
+        conn.commit()
+        logger.info(f"✅ Added {points} points for {username} in {game_name}")
+
+        # Emit updated leaderboard to all clients
+        cursor.execute('SELECT username, score FROM player_scores ORDER BY score DESC LIMIT 10')
+        leaderboard = [{'username': row[0], 'score': row[1]} for row in cursor.fetchall()]
+        socketio.emit('leaderboard_update', {'leaderboard': leaderboard}, room='main_room')
+
+        conn.close()
+    except Exception as e:
+        logger.error(f"❌ Error updating score: {e}")
+
+@socketio.on('get_leaderboard')
+def handle_get_leaderboard(data=None):
+    """Get current leaderboard"""
+    import sqlite3
+
+    try:
+        conn = sqlite3.connect('tokens.db')
+        cursor = conn.cursor()
+        cursor.execute('SELECT username, score FROM player_scores ORDER BY score DESC LIMIT 10')
+        leaderboard = [{'username': row[0], 'score': row[1]} for row in cursor.fetchall()]
+        conn.close()
+
+        emit('leaderboard_update', {'leaderboard': leaderboard})
+        logger.info(f"📊 Sent leaderboard with {len(leaderboard)} players")
+    except Exception as e:
+        logger.error(f"❌ Error fetching leaderboard: {e}")
+        emit('leaderboard_update', {'leaderboard': []})
 
 # === Twitch Bot Startup ===
 

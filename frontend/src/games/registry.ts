@@ -5,11 +5,11 @@
 import type { GameComponentConstructor } from '../types';
 
 // Import game components here
-import { ShapeSmash } from './ShapeSmashPhaser';
+import { ChatMinigames } from './ChatMinigames';
 
 export class GameRegistry {
   private static games = new Map<string, GameComponentConstructor>([
-    ['ShapeSmash', ShapeSmash],
+    ['ChatMinigames', ChatMinigames],
     // Add more games here as they're created
   ]);
 

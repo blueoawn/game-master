@@ -20,7 +20,13 @@ class BaseGame(ABC):
             socketio: Flask-SocketIO instance for emitting events
         """
         self.socketio = socketio
+
+        # IMPORTANT: game_state accumulates ALL state updates since game start.
+        # - Use emit_state(update) to send incremental updates to frontend
+        # - Use get_initial_state() for reconnections to avoid sending stale events
+        # See STATE_MANAGEMENT.md for details
         self.game_state = {}
+
         self.room_id = 'main_room'  # Default room for broadcasts
         self._manifest = None  # Populated by GameLoader
 
@@ -66,7 +72,16 @@ class BaseGame(ABC):
     def get_initial_state(self) -> Dict[str, Any]:
         """
         Return the initial game state as a JSON-serializable dict.
-        This is sent to frontend when game loads.
+        This is sent to frontend when game loads or when a client reconnects.
+
+        CRITICAL: This should return FRESH state, NOT self.game_state.
+
+        Why? self.game_state accumulates ALL updates including transient events.
+        If a client reconnects after someone used !boost, self.game_state might
+        contain {event: 'boost'}, causing the reconnecting client to see the
+        boost effect trigger inappropriately.
+
+        See STATE_MANAGEMENT.md § "Bug #2: Sending Accumulated State on Reconnection"
 
         Returns:
             dict: Initial state (e.g., {'shapes': [], 'score': 0})
@@ -89,17 +104,76 @@ class BaseGame(ABC):
         """
         Emit state update to frontend via SocketIO.
 
+        IMPORTANT: This method sends incremental updates, not full state snapshots.
+
+        Best Practice:
+          - Send minimal updates: emit_state({'shape_added': shape})
+          - NOT full state: emit_state(self.game_state)
+
+        Why? Smaller payloads are faster and make debugging easier (you can see
+        exactly what changed). Frontend GameManager will pass these incremental
+        updates to game components without merging old events in.
+
+        Note: state_update is also merged into self.game_state for tracking, but
+        this accumulated state should NOT be used for reconnections (use
+        get_initial_state() instead).
+
+        See STATE_MANAGEMENT.md § "Best Practices: Emitting State Updates"
+
         Args:
             state_update: Partial state to send (or full state if None)
         """
         if self.socketio and self.room_id:
             data = state_update if state_update else self.game_state
+            # Merge update into accumulated state for tracking
+            if state_update:
+                self.game_state.update(state_update)
+
             self.socketio.emit(
                 'game_state_update',
                 data,
                 room=self.room_id
             )
             logger.debug(f"Emitted state update: {list(data.keys())}")
+
+    def emit_event(self, event_name: str, data: Optional[Dict[str, Any]] = None):
+        """
+        Emit a transient event to frontend WITHOUT storing it in game_state.
+
+        Use this for one-time actions/effects that should NOT persist:
+          - Visual effects (boost, explode, shake)
+          - Notifications (player joined, achievement unlocked)
+          - Scene transitions
+
+        Example:
+            self.emit_event('boost', {'username': 'Alice'})
+            # Frontend receives: {event: 'boost', username: 'Alice'}
+            # Frontend processes it once, then clears it
+            # Future reconnections will NOT see this event
+
+        Why separate from emit_state()?
+          - Makes intent explicit: "this is transient"
+          - Prevents events from accumulating in game_state
+          - Safer for reconnections (won't replay old events)
+
+        See STATE_MANAGEMENT.md § "Backend: Transient Events"
+
+        Args:
+            event_name: Name of the event (e.g., 'boost', 'explode', 'clear')
+            data: Optional additional data to send with the event
+        """
+        if self.socketio and self.room_id:
+            event_data = {'event': event_name}
+            if data:
+                event_data.update(data)
+
+            # CRITICAL: Do NOT merge into game_state - events are transient
+            self.socketio.emit(
+                'game_state_update',
+                event_data,
+                room=self.room_id
+            )
+            logger.debug(f"Emitted transient event: {event_name}")
 
     # === LIFECYCLE ===
 
