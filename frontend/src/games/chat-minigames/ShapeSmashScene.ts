@@ -298,9 +298,22 @@ export class ShapeSmashScene extends Phaser.Scene {
   }
 
   private handleTargetHit(shapeId: string, username: string, sprite: Phaser.GameObjects.GameObject) {
-    // Award point to player (local session score)
-    const currentScore = this.scores.get(username) || 0;
-    this.scores.set(username, currentScore + 1);
+    /**
+     * IMPORTANT: Do NOT increment local session scores when using a database backend!
+     *
+     * The old code tracked session scores locally:
+     *   const currentScore = this.scores.get(username) || 0;
+     *   this.scores.set(username, currentScore + 1);
+     *
+     * But this caused double-counting:
+     *   - Session score = 1 (local)
+     *   - Backend updates DB to 1
+     *   - Frontend receives persistent = 1
+     *   - updateLeaderboard() adds: total = persistent(1) + session(1) = 2 ❌
+     *
+     * Solution: Only track persistent scores from the database. The leaderboard
+     * updates automatically when the backend emits 'leaderboard_update'.
+     */
 
     // Save to backend database via Socket.IO
     socket.emit('add_score', {
@@ -318,7 +331,21 @@ export class ShapeSmashScene extends Phaser.Scene {
 
     // Update displays
     this.updateShapeCount();
-    this.updateLeaderboard();
+
+    /**
+     * IMPORTANT: Do NOT call updateLeaderboard() here!
+     *
+     * The leaderboard will be updated automatically when the backend
+     * responds with the 'leaderboard_update' event. Calling it here
+     * causes scores to be counted twice:
+     *   1. Once with session score (this.scores)
+     *   2. Again when backend returns updated persistent score
+     *
+     * Result: persistent(1) + session(1) = 2 points instead of 1!
+     *
+     * See STATE_MANAGEMENT.md § "Double Processing Prevention"
+     */
+    // this.updateLeaderboard(); // ❌ Removed - causes +2 bug
 
     // Show notification
     this.showNotification(`${username} scored! 🎯 +1 point`, 0xFFD700);

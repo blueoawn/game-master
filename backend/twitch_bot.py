@@ -164,6 +164,29 @@ class MyComponent(commands.Component):
         """Command which takes in an arbitrary amount of choices and randomly chooses one."""
         await ctx.reply(f"You provided {len(choices)} choices, I choose: {random.choice(choices)}")
 
+    # === Admin Commands for Score Management ===
+
+    @commands.is_elevated()
+    @commands.command()
+    async def resetscores(self, ctx: commands.Context) -> None:
+        """Clear all player scores (moderator/broadcaster only)."""
+        # TODO: Implement database clearing logic
+        await ctx.reply("⚠️ Command stub: !resetscores - This will clear all player scores. Use the web admin panel at http://localhost:5000/admin")
+
+    @commands.is_elevated()
+    @commands.command()
+    async def resetscore(self, ctx: commands.Context, username: str) -> None:
+        """Reset a specific player's score to 0 (moderator/broadcaster only)."""
+        # TODO: Implement database reset logic for specific player
+        await ctx.reply(f"⚠️ Command stub: !resetscore {username} - This will reset {username}'s score. Use the web admin panel at http://localhost:5000/admin")
+
+    @commands.is_elevated()
+    @commands.command()
+    async def setscore(self, ctx: commands.Context, username: str, score: int) -> None:
+        """Set a specific player's score (moderator/broadcaster only)."""
+        # TODO: Implement database set score logic
+        await ctx.reply(f"⚠️ Command stub: !setscore {username} {score} - This will set {username}'s score to {score}. Use the web admin panel at http://localhost:5000/admin")
+
 
 class DynamicGameCommands(commands.Component):
     """Component that dynamically routes commands to the active game"""
