@@ -1,29 +1,11 @@
 """
-Shape classes for the Shape Smash game.
+Shape classes for games.
 Contains base Shape class and all shape implementations.
 """
 import pygame
 import random
-
-# Game constants
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 600
-GRAVITY = 0.5
-FRICTION = 0.98
-BOUNCE_DAMPING = 0.7
-
-# Colors
-COLORS = {
-    'red': (255, 0, 0),
-    'blue': (0, 0, 255),
-    'green': (0, 255, 0),
-    'yellow': (255, 255, 0),
-    'purple': (128, 0, 128),
-    'orange': (255, 165, 0),
-    'cyan': (0, 255, 255),
-    'pink': (255, 192, 203),
-    'white': (255, 255, 255)
-}
+from assets.physics import SCREEN_WIDTH, SCREEN_HEIGHT, GRAVITY, FRICTION, BOUNCE_DAMPING
+from assets.colors import COLORS
 
 
 class Shape:

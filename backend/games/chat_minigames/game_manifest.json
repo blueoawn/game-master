@@ -1,0 +1,77 @@
+{
+  "id": "chat_minigames",
+  "version": "1.0.0",
+  "type": "minigame_collection",
+  "name": "Chat Minigames",
+  "description": "A collection of interactive mini-games where viewers participate through Twitch chat commands",
+  "author": "Stream Tools",
+  "license": "MIT",
+
+  "backend": {
+    "entry_point": "game:ChatMinigamesGame"
+  },
+
+  "frontend": {
+    "entry_point": "frontend/src/games/ChatMinigames.ts",
+    "component": "ChatMinigames"
+  },
+
+  "config": {
+    "canvas_width": 1920,
+    "canvas_height": 1080,
+    "default_minigame": "shape_smash"
+  },
+
+  "minigames": [
+    {
+      "id": "shape_smash",
+      "name": "Shape Smash",
+      "description": "Interactive physics sandbox where viewers spawn different shapes",
+      "scene": "ShapeSmashScene",
+      "commands": [
+        {
+          "name": "square",
+          "description": "Spawn a square with your username",
+          "cooldown": 5
+        },
+        {
+          "name": "circle",
+          "description": "Spawn a circle with your username",
+          "cooldown": 5
+        },
+        {
+          "name": "triangle",
+          "description": "Spawn a triangle with your username",
+          "cooldown": 5
+        },
+        {
+          "name": "boost",
+          "description": "Launch all shapes upward",
+          "cooldown": 10,
+          "mod_only": true
+        },
+        {
+          "name": "explode",
+          "description": "Explode shapes from center",
+          "cooldown": 10,
+          "mod_only": true
+        },
+        {
+          "name": "clear",
+          "description": "Clear all shapes from the screen",
+          "cooldown": 15,
+          "mod_only": true
+        }
+      ]
+    }
+  ],
+
+  "commands": [
+    {
+      "name": "minigame",
+      "description": "Switch to a different minigame",
+      "usage": "!minigame <name>",
+      "mod_only": true
+    }
+  ]
+}
