@@ -1,7 +1,5 @@
 # Twitch Chat Games Platform
 
-> **Version:** 2.0
-> **Last Updated:** 2025-01-16
 > **Architecture:** Flask (Python) + Vite (TypeScript) + Phaser 3
 
 A modular, real-time interactive gaming platform where your Twitch chat controls the action! Built with modern web technologies for smooth performance and easy extensibility.
