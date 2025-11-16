@@ -159,7 +159,7 @@ To show different games:
 
 To use a custom resolution:
 
-1. **Update game manifest** (`games/builtin/shape_smash/game_manifest.json`):
+1. **Update game manifest** (`backend/games/shape_smash/game_manifest.json`):
    ```json
    "config": {
      "canvas_width": 1280,

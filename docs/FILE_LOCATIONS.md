@@ -25,7 +25,7 @@ Quick reference for where everything is in the new architecture.
 
 ### Game Discovery
 Games are discovered by scanning these directories:
-- `games/builtin/` - Built-in games
+- `backend/games/` - Built-in games
 - `submodules/` - Git submodule games
 
 Each game needs:
@@ -39,12 +39,12 @@ Each game needs:
 
 **Manifest:**
 ```
-games/builtin/shape_smash/game_manifest.json
+backend/games/shape_smash/game_manifest.json
 ```
 
 **Backend:**
 ```
-games/builtin/shape_smash/backend/game.py
+backend/games/shape_smash/backend/game.py
 ```
 
 **Frontend:**
@@ -70,7 +70,7 @@ private static games = new Map<string, GameComponentConstructor>([
 | **Run Frontend Dev** | `cd frontend && npm run dev` |
 | **Build Frontend** | `cd frontend && npm run build` |
 | **Backend Serves From** | `frontend/dist/` |
-| **Add New Game** | `games/builtin/your_game/` or `submodules/your_game/` |
+| **Add New Game** | `backend/games/your_game/` or `submodules/your_game/` |
 | **Register Frontend Game** | `frontend/src/games/registry.ts` |
 | **Twitch Bot** | `backend/twitch_bot.py` |
 | **Game Discovery** | `backend/game_loader.py` |

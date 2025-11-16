@@ -98,7 +98,7 @@ Follow [PHASER_GAME_TEMPLATE.md](PHASER_GAME_TEMPLATE.md) for step-by-step guide
 
 ### Option 2: Quick Summary
 
-1. **Create folders**: `games/builtin/my_game/backend` and `frontend`
+1. **Create folders**: `backend/games/my_game/backend` and `frontend`
 2. **Create manifest**: `game_manifest.json`
 3. **Python backend**: Handles Twitch commands
 4. **TypeScript frontend**: Phaser 3 game rendering
@@ -123,7 +123,7 @@ chat-games/
 │   │   └── main.ts
 │   └── dist/            # Built files (Flask serves these)
 │
-└── games/builtin/       # Your game modules
+└── backend/games/       # Your game modules
     └── shape_smash/
         ├── game_manifest.json
         ├── backend/game.py

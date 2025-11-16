@@ -30,7 +30,7 @@ class GameManager:
         # Initialize game loader
         base_path = Path(__file__).parent.parent
         search_paths = [
-            base_path / "games" / "builtin",
+            base_path / "backend" / "games",
             base_path / "submodules"
         ]
         self.loader = GameLoader(search_paths)

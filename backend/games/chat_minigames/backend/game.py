@@ -9,7 +9,8 @@ import logging
 from typing import Dict, Any, Callable
 
 # Add backend to path for BaseGame import
-backend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../../../backend'))
+# Path: backend/games/chat_minigames/backend/game.py → ../../ → backend/
+backend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 sys.path.insert(0, backend_path)
 
 from base_game import BaseGame

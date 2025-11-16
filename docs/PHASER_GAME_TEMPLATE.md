@@ -16,8 +16,8 @@ Template and guide for creating new games using Phaser 3.
 ### 1. Create Folder Structure
 
 ```bash
-mkdir -p games/builtin/my_game/backend
-mkdir -p games/builtin/my_game/frontend
+mkdir -p backend/games/my_game/backend
+mkdir -p backend/games/my_game/frontend
 ```
 
 ### 2. Create Manifest (`game_manifest.json`)
